@@ -15,10 +15,13 @@ class Distributor {
     }
     
     public aim(part : number){
+        if (part < 0 || part >= this.parts){
+            this.reset();
+            return;
+        }
+
         let degrees : number = ((this.range * 2) / (this.parts - 1) * part) - this.range;
-        console.log("Degrees: " + degrees);
         let move : number = degrees - this.motor.angle();
-        console.log("Move: " + move);
         this.motor.run(this.speed, move, MoveUnit.Degrees);
     }
 
