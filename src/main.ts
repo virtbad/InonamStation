@@ -1,9 +1,11 @@
+// Priority: -1
 const version : number = 1.0;
 console.sendToScreen();
 console.log("Running InonamStation v" + version);
 
 console.log("Initializing Values");
 const detectorThreshold : number = 5;
+const triggerThreshold : number = 30;
 
 const colorPartMap : ColorNumberMap = new ColorNumberMap();
 colorPartMap.put(ColorSensorColor.Red, 0);
@@ -24,21 +26,17 @@ const detector : sensors.UltraSonicSensor = sensors.ultrasonic2;
 const color : sensors.ColorSensor = sensors.color1;
 
 console.log("Initializing Triggers");
-const firstTrigger : sensors.TouchSensor = sensors.touch3;
-const secondTrigger : sensors.TouchSensor = sensors.touch4;
-
-console.log("Setting up inbuilt Listeners")
-firstTrigger.onEvent(ButtonEvent.Pressed, trigger);
-secondTrigger.onEvent(ButtonEvent.Pressed, trigger);
+const trigger : sensors.UltraSonicSensor = sensors.ultrasonic4;
 
 console.log("Setting up manual Listeners")
 forever (() => {
-    if (detector.distance() <= detectorThreshold) analyse();
+    if (detector.distance() <= detectorThreshold) control.runInParallel(analyse);
+    if (trigger.distance() <= triggerThreshold) control.runInParallel(triggered);
 });
 
 console.log("Finished Initializing!")
 
-function trigger(){
+function triggered(){
     console.log("Detected Something");
     collector.run(20);
     control.runInParallel(() => collector.run(20))
@@ -62,3 +60,4 @@ function analyse(){
 
     console.log("Deposited Brick")
 }
+
