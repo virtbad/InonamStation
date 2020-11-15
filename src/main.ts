@@ -2,14 +2,16 @@
 music.playTone(Note.A, 100);
 
 const version : number = 1.2;
-console.sendToScreen();
 console.log("Running InonamStation v" + version);
 
 console.log("Initializing Values");
 const detectorThreshold : number = 5;
 const triggerThreshold : number = 70;
+const objectsToFind: number = 3;
 
-const colorPartMap : ColorNumberMap = new ColorNumberMap();
+const ui = new UI();
+
+const colorPartMap: ColorNumberMap = new ColorNumberMap();
 colorPartMap.put(ColorSensorColor.Red, 0);
 colorPartMap.put(ColorSensorColor.Yellow, 1);
 colorPartMap.put(ColorSensorColor.Green, 2);
@@ -81,6 +83,20 @@ function analyse(){
     ejector.run(40);
     if(part != -1) distributor.reset();
 
+    switch (current) {
+      case ColorSensorColor.Red:
+        ui.updateRed(100 / objectsToFind);
+        break;
+      case ColorSensorColor.Yellow:
+        ui.updateYellow(100 / objectsToFind);
+        break;
+      case ColorSensorColor.Green:
+        ui.updateGreen(100 / objectsToFind);
+        break;
+      case ColorSensorColor.Blue:
+        ui.updateBlue(100 / objectsToFind);
+        break;
+    }
     console.log("Deposited Brick")
 }
 
