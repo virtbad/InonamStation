@@ -1,65 +1,114 @@
-const version: number = 1.1;
+// Priority: -1
+music.playTone(Note.A, 100);
 
-const detectorThreshold: number = 5;
+const version : number = 1.2;
+console.log("Running InonamStation v" + version);
+
+console.log("Initializing Values");
+const detectorThreshold : number = 5;
+const triggerThreshold : number = 70;
 const objectsToFind: number = 3;
 
-const colorPartMap: ColorNumberMap = new ColorNumberMap();
 const ui = new UI();
+
+const colorPartMap: ColorNumberMap = new ColorNumberMap();
 colorPartMap.put(ColorSensorColor.Red, 0);
 colorPartMap.put(ColorSensorColor.Yellow, 1);
 colorPartMap.put(ColorSensorColor.Green, 2);
 colorPartMap.put(ColorSensorColor.Blue, 3);
 
-const collector: ConveyorBelt = new ConveyorBelt(false, 50, 7, motors.largeB);
-const elevator: ConveyorBelt = new ConveyorBelt(false, 50, 3.5, motors.largeA);
-const ejector: ConveyorBelt = new ConveyorBelt(false, 50, 12, motors.largeC);
+console.log("Initializing Conveyor Belts")
+const collector : ConveyorBelt = new ConveyorBelt(false, 50, 7, motors.largeA);
+const elevator : ConveyorBelt = new ConveyorBelt(false, 50, 3.5, motors.largeB);
+const ejector : ConveyorBelt = new ConveyorBelt(false, 50, 12, motors.largeD);
 
-const distributor: Distributor = new Distributor(motors.mediumD, 400, 4, 10);
+console.log("Initializing Distributor")
+const distributor : Distributor = new Distributor(motors.mediumC, 400, 4, 10);
 
-const detector: sensors.UltraSonicSensor = sensors.ultrasonic2;
-const color: sensors.ColorSensor = sensors.color1;
+console.log("Initializing Sensors")
+const detector : sensors.UltraSonicSensor = sensors.ultrasonic1;
+const color : sensors.ColorSensor = sensors.color2;
+color.setMode(ColorSensorMode.Color);
 
-const firstTrigger: sensors.TouchSensor = sensors.touch3;
-const secondTrigger: sensors.TouchSensor = sensors.touch4;
+console.log("Initializing Triggers");
+const trigger : sensors.InfraredSensor = sensors.infrared3;
 
-firstTrigger.onEvent(ButtonEvent.Pressed, trigger);
-secondTrigger.onEvent(ButtonEvent.Pressed, trigger);
+console.log("Setting up manual Listeners")
+let triggerSame : boolean = false;
+let detectorSame : boolean = false;
+forever (() => {
+    if (detector.distance() <= detectorThreshold){
+        if (!detectorSame) analyse();
+        detectorSame = true;
+    }
+    else detectorSame = false;
 
-forever(() => {
-  if (detector.distance() <= detectorThreshold) analyse();
+    if (trigger.proximity() <= triggerThreshold){
+        if (!triggerSame) triggered();
+        triggerSame = true;
+    }
+    else triggerSame = false;
 });
 
-function trigger() {
-  collector.run(20);
-  control.runInParallel(() => collector.run(20));
-  elevator.go();
+console.log("Finished Initializing!")
+
+function triggered(){
+    console.log("Detected Something");
+    collector.run(20);
+    control.runInParallel(() => collector.run(40));
+    elevator.go();
 }
 
-function analyse() {
-  elevator.stop();
+function analyse(){
+    let firstColor : ColorSensorColor = color.color();
+    if(firstColor == ColorSensorColor.Black || firstColor == ColorSensorColor.None){ // Sometimes returns random noise
+        return;
+    }
 
-  pause(1000);
+    elevator.stop();
 
-  let part: number = colorPartMap.get(color.color());
+    pause(1000);
 
-  pause(1000);
+    let current : ColorSensorColor = color.color();
+    if (current == ColorSensorColor.Brown) current = ColorSensorColor.Yellow; //Sometimes detects yellow as brown
 
-  elevator.run(15);
-  distributor.aim(part);
-  control.runInParallel(() => ejector.run(40));
-  distributor.reset();
-  switch (color.color()) {
-    case 5:
-      ui.updateRed(100 / objectsToFind);
-      break;
-    case 4:
-      ui.updateYellow(100 / objectsToFind);
-      break;
-    case 3:
-      ui.updateGreen(100 / objectsToFind);
-      break;
-    case 2:
-      ui.updateBlue(100 / objectsToFind);
-      break;
-  }
+    let part : number = colorPartMap.get(current);
+    console.log("Found Brick: " + colorToString(current));
+
+    pause(1000);
+
+    elevator.run(15);
+    ejector.run(10);
+    if(part != -1) distributor.aim(part);
+    ejector.run(40);
+    if(part != -1) distributor.reset();
+
+    switch (current) {
+      case ColorSensorColor.Red:
+        ui.updateRed(100 / objectsToFind);
+        break;
+      case ColorSensorColor.Yellow:
+        ui.updateYellow(100 / objectsToFind);
+        break;
+      case ColorSensorColor.Green:
+        ui.updateGreen(100 / objectsToFind);
+        break;
+      case ColorSensorColor.Blue:
+        ui.updateBlue(100 / objectsToFind);
+        break;
+    }
+    console.log("Deposited Brick")
+}
+
+function colorToString(color : ColorSensorColor) : string {
+    switch (color){
+        case ColorSensorColor.White: return "White";
+        case ColorSensorColor.Black: return "Black";
+        case ColorSensorColor.Brown: return "Brown";
+        case ColorSensorColor.Red: return "Red";
+        case ColorSensorColor.Green: return "Green";
+        case ColorSensorColor.Blue: return "Blue";
+        case ColorSensorColor.Yellow: return "Yellow";
+        default: return "None";
+    }
 }
